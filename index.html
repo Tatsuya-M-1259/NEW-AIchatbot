@@ -55,7 +55,7 @@
                 <div>
                     <h1 class="font-black text-lg leading-tight text-slate-900 tracking-tighter text-indigo-900">回答正誤管理システム</h1>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <p id="loadStatus" class="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">SYSTEM READY</p>
+                        <p id="loadStatus" class="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">SYSTEM READY (HONKAKU VER)</p>
                     </div>
                 </div>
             </div>
@@ -69,7 +69,7 @@
                 </label>
                 <input type="file" id="csvUpload" class="hidden" accept=".csv">
                 
-                <button onclick="exportAsHtmlViewer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md" title="全データを含んだHTMLファイルを出力します">
+                <button onclick="exportAsHtmlViewer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md">
                     <i data-lucide="eye" class="w-4 h-4"></i>ビューワー出力
                 </button>
 
@@ -163,7 +163,7 @@
                 </table>
 
                 <div id="emptyState" class="absolute inset-0 flex items-center justify-center p-10 cursor-pointer" onclick="document.getElementById('csvUpload').click()">
-                    <div class="drop-zone p-16 rounded-[40px] w-full max-xl flex flex-col items-center gap-6 text-center shadow-inner">
+                    <div class="drop-zone p-16 rounded-[40px] w-full max-w-xl flex flex-col items-center gap-6 text-center shadow-inner">
                         <div class="bg-indigo-600 p-6 rounded-3xl text-white shadow-2xl shadow-indigo-200">
                             <i data-lucide="file-spreadsheet" class="w-12 h-12"></i>
                         </div>
@@ -316,8 +316,8 @@
             const accuracy = denominator > 0 ? ((numerator / denominator) * 100).toFixed(1) : 0;
             
             const pending = fullData.filter(d => d.status === '未着手').length;
-            
             const errors = fullData.filter(d => d.errorType && d.errorType !== 'なし').length;
+
             document.getElementById('stat-total').textContent = total;
             document.getElementById('stat-accuracy').textContent = `${accuracy}%`;
             document.getElementById('cnt-correct').textContent = nCorrect;
@@ -379,16 +379,15 @@
             }
         }
 
-        // CSVインポート時のデータ正規化 (空行除外フィルターを追加)
+        // CSVインポート：13項目の元データ形式に対応
         document.getElementById('csvUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             Papa.parse(file, {
                 header: true, skipEmptyLines: true,
                 complete: (results) => {
-                    // 修正箇所：問い合わせ内容が空のデータを除外
                     fullData = results.data
-                        .filter(item => (item['問い合わせ内容'] || item['query'] || '').trim() !== '')
+                        .filter(item => (item['問い合わせ内容'] || item['query'] || '').trim() !== '') // 空行除外
                         .map(item => {
                             const rawDept = item['所管課'] || '';
                             const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
@@ -405,6 +404,9 @@
 
                             return {
                                 id: (item['案件ID'] || item['id'] || 'CASE-' + Date.now()).toString().trim(),
+                                session_id: (item['セッションID'] || '').toString().trim(),
+                                date_str: (item['問い合わせ日時'] || '').toString().trim(),
+                                user_id: (item['ユーザーID'] || '').toString().trim(),
                                 query: (item['問い合わせ内容'] || item['query'] || '').trim(),
                                 answer: (item['回答内容'] || item['answer'] || '').trim(),
                                 dept1: depts[0] || '',
@@ -414,10 +416,11 @@
                                 errorType: (item['エラー分類'] || item['errorType'] || 'なし').trim(),
                                 ideal: (item['理想の回答'] || item['ideal'] || '').trim(),
                                 action: (item['改善アクション'] || item['action'] || '').trim(),
-                                status: status
+                                status: status,
+                                char_count: (item['文字数'] || '').toString().trim()
                             };
                         });
-                    saveToLocal(); applyFilters(); showMessage("インポート完了");
+                    saveToLocal(); applyFilters(); showMessage("インポート完了: " + fullData.length + "件");
                 }
             });
         });
@@ -435,11 +438,26 @@
             showMessage("ビューワーを出力しました");
         };
 
+        // CSV出力：13項目の元データ形式を維持
         window.exportData = () => {
             if (fullData.length === 0) return alert("データがありません");
             const exp = fullData.map(d => {
                 const combinedDept = [d.dept1, d.dept2, d.dept3].filter(Boolean).join('\n');
-                return { "案件ID": d.id, "問い合わせ内容": d.query, "回答内容": d.answer, "所管課": combinedDept, "正誤判定": d.judge, "エラー分類": d.errorType, "理想の回答": d.ideal, "改善アクション": d.action, "対応状況": d.status };
+                return { 
+                    "案件ID": d.id, 
+                    "セッションID": d.session_id || "",
+                    "問い合わせ日時": d.date_str || "",
+                    "ユーザーID": d.user_id || "",
+                    "問い合わせ内容": d.query, 
+                    "回答内容": d.answer, 
+                    "所管課": combinedDept, 
+                    "正誤判定": d.judge, 
+                    "エラー分類": d.errorType, 
+                    "理想の回答": d.ideal, 
+                    "改善アクション": d.action, 
+                    "対応状況": d.status,
+                    "文字数": d.char_count || ""
+                };
             });
             const csv = Papa.unparse(exp);
             const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
@@ -478,6 +496,9 @@
             let item = fullData.find(d => String(d.id) === String(currentEditingId));
             const record = {
                 id: currentEditingId,
+                session_id: item ? item.session_id : "",
+                date_str: item ? item.date_str : "",
+                user_id: item ? item.user_id : "",
                 query: document.getElementById('edit-query').value,
                 answer: document.getElementById('edit-answer').value,
                 dept1: document.getElementById('edit-dept1').value,
@@ -487,7 +508,8 @@
                 errorType: document.getElementById('edit-errorType').value,
                 ideal: document.getElementById('edit-ideal').value,
                 action: document.getElementById('edit-action').value,
-                status: document.getElementById('edit-status').value
+                status: document.getElementById('edit-status').value,
+                char_count: item ? item.char_count : ""
             };
             if (item) { Object.assign(item, record); } else { fullData.unshift(record); }
             saveToLocal(); applyFilters(); closeModal(); showMessage("変更を保存しました");

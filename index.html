@@ -46,7 +46,7 @@
                 <div>
                     <h1 class="font-black text-lg leading-tight text-slate-900 tracking-tighter text-indigo-900">回答正誤管理システム</h1>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <p id="loadStatus" class="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">SYSTEM READY (HONKAKU VER)</p>
+                        <p id="loadStatus" class="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">SYSTEM READY (ULTRA IMPORT)</p>
                     </div>
                 </div>
             </div>
@@ -349,66 +349,67 @@
             }
         }
 
-        // CSVインポート：Shift-JISとUTF-8の両方に対応
+        // CSVインポート：ヘッダー名に依存せず「列のインデックス」で読み込む最強モード
         document.getElementById('csvUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // 文字コードの自動判別を試みるため、一旦FileReaderで読み込む
+            // Shift-JISで強制読み込みして文字化けを回避
             const reader = new FileReader();
             reader.onload = (event) => {
                 const content = event.target.result;
                 Papa.parse(content, {
-                    header: true, skipEmptyLines: 'greedy',
+                    header: false, // ヘッダーなし（配列の配列）として読み込む
+                    skipEmptyLines: 'greedy',
                     complete: (results) => {
-                        console.log("Raw Data:", results.data);
-                        // ヘッダー名が文字化けしていても「5番目の列」などから推測するロジック
-                        fullData = results.data
-                            .filter(item => {
-                                // 問い合わせ内容、または5番目の項目が空でないものを採用
-                                const keys = Object.keys(item);
-                                const qValue = item['問い合わせ内容'] || item['query'] || item[keys[4]] || '';
-                                return qValue.trim() !== '';
-                            })
-                            .map(item => {
-                                const keys = Object.keys(item);
-                                const rawDept = item['所管課'] || item[keys[6]] || '';
+                        const rows = results.data;
+                        if (rows.length < 2) return showMessage("データが見つかりません");
+
+                        // 1行目がヘッダー（項目名）であると仮定して、2行目から読み込む
+                        // もし1行目がデータっぽい（案件IDが含まれない）場合は1行目から読み込む
+                        const startIdx = rows[0][0].includes("案件ID") ? 1 : 0;
+
+                        fullData = rows.slice(startIdx)
+                            .filter(row => row.length >= 5 && (row[4] || '').trim() !== '') // 5列目（問い合わせ内容）が空ならスキップ
+                            .map(row => {
+                                // 列の順番（0から開始）に基づいてマッピング
+                                // 0:案件ID, 1:セッションID, 2:日時, 3:ユーザーID, 4:問い合わせ内容, 5:回答内容, 6:所管課, ...
+                                const rawDept = row[6] || '';
                                 const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
                                 
-                                let status = (item['対応状況'] || item[keys[11]] || '未着手').trim();
+                                let status = (row[11] || '未着手').trim();
                                 if (status === '反映済') status = '反映済み';
                                 if (status === '済') status = '完了';
 
-                                let judge = (item['正誤判定'] || item[keys[7]] || '△判別不能').trim();
+                                let judge = (row[7] || '△判別不能').trim();
                                 if (judge === '正解') judge = '◎正解';
                                 if (judge === '一部正解') judge = '〇一部正解';
                                 if (judge === '不正解') judge = '✕不正解';
                                 if (judge === '判別不能') judge = '△判別不能';
 
                                 return {
-                                    id: (item['案件ID'] || item[keys[0]] || 'CASE-' + Date.now()).toString().trim(),
-                                    session_id: (item['セッションID'] || item[keys[1]] || '').toString().trim(),
-                                    date_str: (item['問い合わせ日時'] || item[keys[2]] || '').toString().trim(),
-                                    user_id: (item['ユーザーID'] || item[keys[3]] || '').toString().trim(),
-                                    query: (item['問い合わせ内容'] || item[keys[4]] || '').trim(),
-                                    answer: (item['回答内容'] || item[keys[5]] || '').trim(),
+                                    id: (row[0] || 'CASE-' + Date.now()).toString().trim(),
+                                    session_id: (row[1] || '').toString().trim(),
+                                    date_str: (row[2] || '').toString().trim(),
+                                    user_id: (row[3] || '').toString().trim(),
+                                    query: (row[4] || '').trim(),
+                                    answer: (row[5] || '').trim(),
                                     dept1: depts[0] || '',
                                     dept2: depts[1] || '',
                                     dept3: depts[2] || '',
                                     judge: judge,
-                                    errorType: (item['エラー分類'] || item[keys[8]] || 'なし').trim(),
-                                    ideal: (item['理想の回答'] || item[keys[9]] || '').trim(),
-                                    action: (item['改善アクション'] || item[keys[10]] || '').trim(),
+                                    errorType: (row[8] || 'なし').trim(),
+                                    ideal: (row[9] || '').trim(),
+                                    action: (row[10] || '').trim(),
                                     status: status,
-                                    char_count: (item['文字数'] || item[keys[12]] || '').toString().trim()
+                                    char_count: (row[12] || '').toString().trim()
                                 };
                             });
-                        saveToLocal(); applyFilters(); showMessage("インポート完了: " + fullData.length + "件");
+                        saveToLocal(); applyFilters(); showMessage("インポート成功: " + fullData.length + "件");
                     }
                 });
             };
-            // まずはUTF-8で試みる。失敗する場合はブラウザが自動調整。
-            reader.readAsText(file, "Shift-JIS"); // 日本のExcelの標準に合わせる
+            reader.readAsText(file, "Shift-JIS");
         });
 
         window.exportAsHtmlViewer = () => {

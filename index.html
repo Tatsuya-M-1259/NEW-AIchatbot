@@ -207,10 +207,11 @@
                             <label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">エラー分類</label>
                             <select id="edit-errorType" class="w-full px-2 py-2 border-2 border-slate-200 rounded-xl text-sm font-bold bg-white focus:border-indigo-400 outline-none">
                                 <option value="なし">なし</option>
-                                <option value="RAG欠如">RAG欠る</option>
+                                <option value="RAG欠如">RAG欠如</option>
                                 <option value="ハルシネーション">ハルシネーション</option>
                                 <option value="指示無視">指示無視</option>
                                 <option value="文脈喪失">文脈喪失</option>
+                                <option value="重複回答">重複回答</option>
                                 <option value="その他">その他</option>
                             </select>
                         </div>
@@ -378,40 +379,44 @@
             }
         }
 
+        // CSVインポート時のデータ正規化 (空行除外フィルターを追加)
         document.getElementById('csvUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             Papa.parse(file, {
                 header: true, skipEmptyLines: true,
                 complete: (results) => {
-                    fullData = results.data.map(item => {
-                        const rawDept = item['所管課'] || '';
-                        const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
-                        
-                        let status = (item['対応状況'] || item['status'] || '未着手').trim();
-                        if (status === '反映済') status = '反映済み';
-                        if (status === '済') status = '完了';
+                    // 修正箇所：問い合わせ内容が空のデータを除外
+                    fullData = results.data
+                        .filter(item => (item['問い合わせ内容'] || item['query'] || '').trim() !== '')
+                        .map(item => {
+                            const rawDept = item['所管課'] || '';
+                            const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
+                            
+                            let status = (item['対応状況'] || item['status'] || '未着手').trim();
+                            if (status === '反映済') status = '反映済み';
+                            if (status === '済') status = '完了';
 
-                        let judge = (item['正誤判定'] || item['judge'] || '△判別不能').trim();
-                        if (judge === '正解') judge = '◎正解';
-                        if (judge === '一部正解') judge = '〇一部正解';
-                        if (judge === '不正解') judge = '✕不正解';
-                        if (judge === '判別不能') judge = '△判別不能';
+                            let judge = (item['正誤判定'] || item['judge'] || '△判別不能').trim();
+                            if (judge === '正解') judge = '◎正解';
+                            if (judge === '一部正解') judge = '〇一部正解';
+                            if (judge === '不正解') judge = '✕不正解';
+                            if (judge === '判別不能') judge = '△判別不能';
 
-                        return {
-                            id: (item['案件ID'] || item['id'] || 'CASE-' + Date.now()).toString().trim(),
-                            query: (item['問い合わせ内容'] || item['query'] || '').trim(),
-                            answer: (item['回答内容'] || item['answer'] || '').trim(),
-                            dept1: depts[0] || '',
-                            dept2: depts[1] || '',
-                            dept3: depts[2] || '',
-                            judge: judge,
-                            errorType: (item['エラー分類'] || item['errorType'] || 'なし').trim(),
-                            ideal: (item['理想の回答'] || item['ideal'] || '').trim(),
-                            action: (item['改善アクション'] || item['action'] || '').trim(),
-                            status: status
-                        };
-                    });
+                            return {
+                                id: (item['案件ID'] || item['id'] || 'CASE-' + Date.now()).toString().trim(),
+                                query: (item['問い合わせ内容'] || item['query'] || '').trim(),
+                                answer: (item['回答内容'] || item['answer'] || '').trim(),
+                                dept1: depts[0] || '',
+                                dept2: depts[1] || '',
+                                dept3: depts[2] || '',
+                                judge: judge,
+                                errorType: (item['エラー分類'] || item['errorType'] || 'なし').trim(),
+                                ideal: (item['理想の回答'] || item['ideal'] || '').trim(),
+                                action: (item['改善アクション'] || item['action'] || '').trim(),
+                                status: status
+                            };
+                        });
                     saveToLocal(); applyFilters(); showMessage("インポート完了");
                 }
             });

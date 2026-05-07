@@ -365,4 +365,141 @@
             const ctx1 = document.getElementById('judgmentChart');
             if (ctx1 && fullData.length > 0) {
                 charts.judgment = new Chart(ctx1, { 
-                    type: 'doughnut', data: { labels: Object.keys(judgeCounts), datasets: [{ data: Object.values(judge
+                    type: 'doughnut', data: { labels: Object.keys(judgeCounts), datasets: [{ data: Object.values(judgeCounts), backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#94a3b8'], borderWidth: 0 }] }, 
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } 
+                });
+            }
+            const ctx2 = document.getElementById('errorChart');
+            if (ctx2 && Object.keys(errorCounts).length > 0) {
+                charts.error = new Chart(ctx2, { 
+                    type: 'bar', data: { labels: Object.keys(errorCounts), datasets: [{ label: '件数', data: Object.values(errorCounts), backgroundColor: '#4f46e5' }] }, 
+                    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' } 
+                });
+            }
+        }
+
+        document.getElementById('csvUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            Papa.parse(file, {
+                header: true, skipEmptyLines: true,
+                complete: (results) => {
+                    fullData = results.data.map(item => {
+                        const rawDept = item['所管課'] || '';
+                        const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
+                        
+                        let status = (item['対応状況'] || item['status'] || '未着手').trim();
+                        if (status === '反映済') status = '反映済み';
+                        if (status === '済') status = '完了';
+
+                        let judge = (item['正誤判定'] || item['judge'] || '△判別不能').trim();
+                        if (judge === '正解') judge = '◎正解';
+                        if (judge === '一部正解') judge = '〇一部正解';
+                        if (judge === '不正解') judge = '✕不正解';
+                        if (judge === '判別不能') judge = '△判別不能';
+
+                        return {
+                            id: (item['案件ID'] || item['id'] || 'CASE-' + Date.now()).toString().trim(),
+                            query: (item['問い合わせ内容'] || item['query'] || '').trim(),
+                            answer: (item['回答内容'] || item['answer'] || '').trim(),
+                            dept1: depts[0] || '',
+                            dept2: depts[1] || '',
+                            dept3: depts[2] || '',
+                            judge: judge,
+                            errorType: (item['エラー分類'] || item['errorType'] || 'なし').trim(),
+                            ideal: (item['理想の回答'] || item['ideal'] || '').trim(),
+                            action: (item['改善アクション'] || item['action'] || '').trim(),
+                            status: status
+                        };
+                    });
+                    saveToLocal(); applyFilters(); showMessage("インポート完了");
+                }
+            });
+        });
+
+        window.exportAsHtmlViewer = () => {
+            if (fullData.length === 0) return alert("データがありません");
+            let html = document.documentElement.outerHTML;
+            const dataStr = JSON.stringify(fullData).replace(/<\/script>/g, '<\\/script>');
+            const dataScript = `\n<script>window.PRE_LOADED_DATA = ${dataStr};<\/script>\n`;
+            html = html.replace('<head>', '<head>' + dataScript);
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+            link.download = `回答正誤管理システム_Viewer_${new Date().toISOString().split('T')[0]}.html`;
+            link.click();
+            showMessage("ビューワーを出力しました");
+        };
+
+        window.exportData = () => {
+            if (fullData.length === 0) return alert("データがありません");
+            const exp = fullData.map(d => {
+                const combinedDept = [d.dept1, d.dept2, d.dept3].filter(Boolean).join('\n');
+                return { "案件ID": d.id, "問い合わせ内容": d.query, "回答内容": d.answer, "所管課": combinedDept, "正誤判定": d.judge, "エラー分類": d.errorType, "理想の回答": d.ideal, "改善アクション": d.action, "対応状況": d.status };
+            });
+            const csv = Papa.unparse(exp);
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+            link.download = `回答正誤データ_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+        };
+
+        window.openNewRecordModal = () => {
+            currentEditingId = 'CASE-' + Date.now().toString().slice(-4);
+            document.getElementById('modalTitle').textContent = "新規案件登録";
+            document.getElementById('modalCaseIdDisplay').textContent = "NEW ENTRY";
+            ['query', 'answer', 'dept1', 'dept2', 'dept3', 'errorType', 'ideal', 'action'].forEach(k => document.getElementById(`edit-${k}`).value = '');
+            document.getElementById('edit-judge').value = '△判別不能';
+            document.getElementById('edit-status').value = '未着手';
+            document.getElementById('reviewModal').classList.remove('hidden');
+        };
+
+        window.openReview = (id) => {
+            const item = fullData.find(d => String(d.id) === String(id));
+            if(!item) return;
+            currentEditingId = id;
+            document.getElementById('modalTitle').textContent = "査読・案件編集";
+            document.getElementById('modalCaseIdDisplay').textContent = item.id;
+            
+            ['query', 'answer', 'dept1', 'dept2', 'dept3', 'judge', 'errorType', 'ideal', 'action', 'status'].forEach(k => {
+                const el = document.getElementById(`edit-${k}`);
+                if (el) el.value = item[k] || (el.tagName === 'SELECT' ? el.options[0].value : '');
+            });
+            
+            document.getElementById('reviewModal').classList.remove('hidden');
+        };
+
+        window.closeModal = () => document.getElementById('reviewModal').classList.add('hidden');
+
+        window.saveChanges = () => {
+            let item = fullData.find(d => String(d.id) === String(currentEditingId));
+            const record = {
+                id: currentEditingId,
+                query: document.getElementById('edit-query').value,
+                answer: document.getElementById('edit-answer').value,
+                dept1: document.getElementById('edit-dept1').value,
+                dept2: document.getElementById('edit-dept2').value,
+                dept3: document.getElementById('edit-dept3').value,
+                judge: document.getElementById('edit-judge').value,
+                errorType: document.getElementById('edit-errorType').value,
+                ideal: document.getElementById('edit-ideal').value,
+                action: document.getElementById('edit-action').value,
+                status: document.getElementById('edit-status').value
+            };
+            if (item) { Object.assign(item, record); } else { fullData.unshift(record); }
+            saveToLocal(); applyFilters(); closeModal(); showMessage("変更を保存しました");
+        };
+
+        function saveToLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(fullData)); }
+        function showMessage(text) {
+            const el = document.getElementById('uiMessage');
+            el.innerHTML = text;
+            el.classList.remove('hidden');
+            el.className = "fixed top-24 left-1/2 -translate-x-1/2 z-[300] min-w-[320px] px-8 py-5 rounded-3xl bg-slate-900 text-white shadow-2xl text-sm font-bold flex flex-col items-center gap-3 text-center transition-all";
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+        window.toggleSort = (key) => { sortConfig.direction = (sortConfig.key === key && sortConfig.direction === 'asc') ? 'desc' : 'asc'; sortConfig.key = key; applyFilters(); };
+        window.clearStoredData = () => { if(confirm("全データを削除しますか？")){ localStorage.removeItem(STORAGE_KEY); fullData = []; applyFilters(); } };
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('filterJudge').addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>

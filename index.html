@@ -16,12 +16,10 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
-        
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f1f5f9; }
         .data-table { border-spacing: 0; width: 100%; table-layout: fixed; }
         .data-table th, .data-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px 12px; }
         .data-table th { background-color: #f8fafc; position: sticky; top: 0; z-index: 10; font-weight: 800; color: #64748b; font-size: 11px; }
-
         .col-id { width: 130px; }
         .col-judge { width: 100px; }
         .col-status { width: 100px; }
@@ -29,18 +27,13 @@
         .col-dept { width: 220px; }
         .col-query { width: auto; min-width: 400px; }
         .col-action { width: 80px; }
-
         .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; display: inline-block; text-align: center; width: 100%; }
         .row-correct { border-left: 5px solid #10b981 !important; }
         .row-partial { border-left: 5px solid #f59e0b !important; }
         .row-incorrect { border-left: 5px solid #ef4444 !important; }
         .row-unknown { border-left: 5px solid #94a3b8 !important; }
-        
         .sortable-header { cursor: pointer; user-select: none; transition: all 0.2s; }
         .sortable-header:hover { background-color: #f1f5f9; }
-        #uiMessage { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); }
-        .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.2s; }
-        .drop-zone.active { border-color: #4f46e5; background-color: #f5f3ff; }
         .chart-container { position: relative; height: 180px; width: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
@@ -49,9 +42,7 @@
     <header class="sticky top-0 z-50 w-full bg-white border-b border-slate-200 shadow-sm">
         <div class="max-w-full mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <div class="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
-                    <i data-lucide="layout" class="text-white w-6 h-6"></i>
-                </div>
+                <div class="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100"><i data-lucide="layout" class="text-white w-6 h-6"></i></div>
                 <div>
                     <h1 class="font-black text-lg leading-tight text-slate-900 tracking-tighter text-indigo-900">回答正誤管理システム</h1>
                     <div class="flex items-center gap-2 mt-0.5">
@@ -61,21 +52,11 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <button onclick="openNewRecordModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i>新規登録
-                </button>
-                <label for="csvUpload" class="cursor-pointer bg-white border-2 border-slate-200 hover:border-indigo-400 text-slate-700 px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-sm">
-                    <i data-lucide="upload" class="w-4 h-4 text-indigo-500"></i>CSVインポート
-                </label>
+                <button onclick="openNewRecordModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="plus-circle" class="w-4 h-4"></i>新規登録</button>
+                <label for="csvUpload" class="cursor-pointer bg-white border-2 border-slate-200 hover:border-indigo-400 text-slate-700 px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-sm"><i data-lucide="upload" class="w-4 h-4 text-indigo-500"></i>CSVインポート</label>
                 <input type="file" id="csvUpload" class="hidden" accept=".csv">
-                
-                <button onclick="exportAsHtmlViewer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md">
-                    <i data-lucide="eye" class="w-4 h-4"></i>ビューワー出力
-                </button>
-
-                <button onclick="exportData()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md">
-                    <i data-lucide="download" class="w-4 h-4 text-indigo-300"></i>CSV出力
-                </button>
+                <button onclick="exportAsHtmlViewer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="eye" class="w-4 h-4"></i>ビューワー出力</button>
+                <button onclick="exportData()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 shadow-md"><i data-lucide="download" class="w-4 h-4 text-indigo-300"></i>CSV出力</button>
                 <div class="w-px h-6 bg-slate-200 mx-2"></div>
                 <button onclick="clearStoredData()" class="text-slate-400 hover:text-rose-600 p-2 transition-colors" title="全データ削除"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
             </div>
@@ -112,18 +93,13 @@
                     <div class="text-3xl font-black text-rose-500" id="stat-errors">0</div>
                 </div>
             </div>
-            
             <div class="xl:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-72">
                 <h2 class="text-xs font-black text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-tighter"><i data-lucide="pie-chart" class="w-4 h-4"></i>判定内訳</h2>
-                <div class="chart-container">
-                    <canvas id="judgmentChart"></canvas>
-                </div>
+                <div class="chart-container"><canvas id="judgmentChart"></canvas></div>
             </div>
             <div class="xl:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-72">
                 <h2 class="text-xs font-black text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-tighter"><i data-lucide="bar-chart-3" class="w-4 h-4"></i>主要エラー分類</h2>
-                <div class="chart-container">
-                    <canvas id="errorChart"></canvas>
-                </div>
+                <div class="chart-container"><canvas id="errorChart"></canvas></div>
             </div>
         </div>
 
@@ -161,12 +137,9 @@
                     </thead>
                     <tbody id="dataTableBody"></tbody>
                 </table>
-
                 <div id="emptyState" class="absolute inset-0 flex items-center justify-center p-10 cursor-pointer" onclick="document.getElementById('csvUpload').click()">
                     <div class="drop-zone p-16 rounded-[40px] w-full max-w-xl flex flex-col items-center gap-6 text-center shadow-inner">
-                        <div class="bg-indigo-600 p-6 rounded-3xl text-white shadow-2xl shadow-indigo-200">
-                            <i data-lucide="file-spreadsheet" class="w-12 h-12"></i>
-                        </div>
+                        <div class="bg-indigo-600 p-6 rounded-3xl text-white shadow-2xl shadow-indigo-200"><i data-lucide="file-spreadsheet" class="w-12 h-12"></i></div>
                         <h3 class="font-black text-slate-800 text-2xl tracking-tighter">CSVをインポートしてください</h3>
                     </div>
                 </div>
@@ -262,7 +235,6 @@
             lucide.createIcons();
             const preLoaded = window.PRE_LOADED_DATA;
             const saved = localStorage.getItem(STORAGE_KEY);
-            
             if (preLoaded) {
                 fullData = preLoaded;
                 showMessage("<i data-lucide='eye' class='w-4 h-4'></i> ビューワーデータを読み込みました");
@@ -314,10 +286,8 @@
             const denominator = total - nUnknown;
             const numerator = nCorrect + nPartial;
             const accuracy = denominator > 0 ? ((numerator / denominator) * 100).toFixed(1) : 0;
-            
             const pending = fullData.filter(d => d.status === '未着手').length;
             const errors = fullData.filter(d => d.errorType && d.errorType !== 'なし').length;
-
             document.getElementById('stat-total').textContent = total;
             document.getElementById('stat-accuracy').textContent = `${accuracy}%`;
             document.getElementById('cnt-correct').textContent = nCorrect;
@@ -379,50 +349,66 @@
             }
         }
 
-        // CSVインポート：13項目の元データ形式に対応
+        // CSVインポート：Shift-JISとUTF-8の両方に対応
         document.getElementById('csvUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            Papa.parse(file, {
-                header: true, skipEmptyLines: true,
-                complete: (results) => {
-                    fullData = results.data
-                        .filter(item => (item['問い合わせ内容'] || item['query'] || '').trim() !== '') // 空行除外
-                        .map(item => {
-                            const rawDept = item['所管課'] || '';
-                            const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
-                            
-                            let status = (item['対応状況'] || item['status'] || '未着手').trim();
-                            if (status === '反映済') status = '反映済み';
-                            if (status === '済') status = '完了';
 
-                            let judge = (item['正誤判定'] || item['judge'] || '△判別不能').trim();
-                            if (judge === '正解') judge = '◎正解';
-                            if (judge === '一部正解') judge = '〇一部正解';
-                            if (judge === '不正解') judge = '✕不正解';
-                            if (judge === '判別不能') judge = '△判別不能';
+            // 文字コードの自動判別を試みるため、一旦FileReaderで読み込む
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                Papa.parse(content, {
+                    header: true, skipEmptyLines: 'greedy',
+                    complete: (results) => {
+                        console.log("Raw Data:", results.data);
+                        // ヘッダー名が文字化けしていても「5番目の列」などから推測するロジック
+                        fullData = results.data
+                            .filter(item => {
+                                // 問い合わせ内容、または5番目の項目が空でないものを採用
+                                const keys = Object.keys(item);
+                                const qValue = item['問い合わせ内容'] || item['query'] || item[keys[4]] || '';
+                                return qValue.trim() !== '';
+                            })
+                            .map(item => {
+                                const keys = Object.keys(item);
+                                const rawDept = item['所管課'] || item[keys[6]] || '';
+                                const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
+                                
+                                let status = (item['対応状況'] || item[keys[11]] || '未着手').trim();
+                                if (status === '反映済') status = '反映済み';
+                                if (status === '済') status = '完了';
 
-                            return {
-                                id: (item['案件ID'] || item['id'] || 'CASE-' + Date.now()).toString().trim(),
-                                session_id: (item['セッションID'] || '').toString().trim(),
-                                date_str: (item['問い合わせ日時'] || '').toString().trim(),
-                                user_id: (item['ユーザーID'] || '').toString().trim(),
-                                query: (item['問い合わせ内容'] || item['query'] || '').trim(),
-                                answer: (item['回答内容'] || item['answer'] || '').trim(),
-                                dept1: depts[0] || '',
-                                dept2: depts[1] || '',
-                                dept3: depts[2] || '',
-                                judge: judge,
-                                errorType: (item['エラー分類'] || item['errorType'] || 'なし').trim(),
-                                ideal: (item['理想の回答'] || item['ideal'] || '').trim(),
-                                action: (item['改善アクション'] || item['action'] || '').trim(),
-                                status: status,
-                                char_count: (item['文字数'] || '').toString().trim()
-                            };
-                        });
-                    saveToLocal(); applyFilters(); showMessage("インポート完了: " + fullData.length + "件");
-                }
-            });
+                                let judge = (item['正誤判定'] || item[keys[7]] || '△判別不能').trim();
+                                if (judge === '正解') judge = '◎正解';
+                                if (judge === '一部正解') judge = '〇一部正解';
+                                if (judge === '不正解') judge = '✕不正解';
+                                if (judge === '判別不能') judge = '△判別不能';
+
+                                return {
+                                    id: (item['案件ID'] || item[keys[0]] || 'CASE-' + Date.now()).toString().trim(),
+                                    session_id: (item['セッションID'] || item[keys[1]] || '').toString().trim(),
+                                    date_str: (item['問い合わせ日時'] || item[keys[2]] || '').toString().trim(),
+                                    user_id: (item['ユーザーID'] || item[keys[3]] || '').toString().trim(),
+                                    query: (item['問い合わせ内容'] || item[keys[4]] || '').trim(),
+                                    answer: (item['回答内容'] || item[keys[5]] || '').trim(),
+                                    dept1: depts[0] || '',
+                                    dept2: depts[1] || '',
+                                    dept3: depts[2] || '',
+                                    judge: judge,
+                                    errorType: (item['エラー分類'] || item[keys[8]] || 'なし').trim(),
+                                    ideal: (item['理想の回答'] || item[keys[9]] || '').trim(),
+                                    action: (item['改善アクション'] || item[keys[10]] || '').trim(),
+                                    status: status,
+                                    char_count: (item['文字数'] || item[keys[12]] || '').toString().trim()
+                                };
+                            });
+                        saveToLocal(); applyFilters(); showMessage("インポート完了: " + fullData.length + "件");
+                    }
+                });
+            };
+            // まずはUTF-8で試みる。失敗する場合はブラウザが自動調整。
+            reader.readAsText(file, "Shift-JIS"); // 日本のExcelの標準に合わせる
         });
 
         window.exportAsHtmlViewer = () => {
@@ -438,26 +424,11 @@
             showMessage("ビューワーを出力しました");
         };
 
-        // CSV出力：13項目の元データ形式を維持
         window.exportData = () => {
             if (fullData.length === 0) return alert("データがありません");
             const exp = fullData.map(d => {
                 const combinedDept = [d.dept1, d.dept2, d.dept3].filter(Boolean).join('\n');
-                return { 
-                    "案件ID": d.id, 
-                    "セッションID": d.session_id || "",
-                    "問い合わせ日時": d.date_str || "",
-                    "ユーザーID": d.user_id || "",
-                    "問い合わせ内容": d.query, 
-                    "回答内容": d.answer, 
-                    "所管課": combinedDept, 
-                    "正誤判定": d.judge, 
-                    "エラー分類": d.errorType, 
-                    "理想の回答": d.ideal, 
-                    "改善アクション": d.action, 
-                    "対応状況": d.status,
-                    "文字数": d.char_count || ""
-                };
+                return { "案件ID": d.id, "セッションID": d.session_id || "", "問い合わせ日時": d.date_str || "", "ユーザーID": d.user_id || "", "問い合わせ内容": d.query, "回答内容": d.answer, "所管課": combinedDept, "正誤判定": d.judge, "エラー分類": d.errorType, "理想の回答": d.ideal, "改善アクション": d.action, "対応状況": d.status, "文字数": d.char_count || "" };
             });
             const csv = Papa.unparse(exp);
             const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
@@ -481,12 +452,10 @@
             currentEditingId = id;
             document.getElementById('modalTitle').textContent = "査読・案件編集";
             document.getElementById('modalCaseIdDisplay').textContent = item.id;
-            
             ['query', 'answer', 'dept1', 'dept2', 'dept3', 'judge', 'errorType', 'ideal', 'action', 'status'].forEach(k => {
                 const el = document.getElementById(`edit-${k}`);
                 if (el) el.value = item[k] || (el.tagName === 'SELECT' ? el.options[0].value : '');
             });
-            
             document.getElementById('reviewModal').classList.remove('hidden');
         };
 

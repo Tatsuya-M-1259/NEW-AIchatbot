@@ -359,8 +359,8 @@
             reader.onload = (event) => {
                 const content = event.target.result;
                 
-                // UTF-8で読み込んだ結果、文字化け（置換文字 ）が含まれている場合は Shift-JIS と判断して読み直す
-                if (content.includes('')) {
+                // 【修正箇所】UTF-8で読み込んだ結果、Shift-JISデータの混入による「置換文字(\uFFFD)」が含まれているかを厳密にチェック
+                if (content.includes('\uFFFD')) {
                     const sjisReader = new FileReader();
                     sjisReader.onload = (sjisEvent) => {
                         processCSV(sjisEvent.target.result);

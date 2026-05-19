@@ -349,16 +349,32 @@
             }
         }
 
-        // CSVインポート：ヘッダー名に依存せず「列のインデックス」で読み込む最強モード
+        // CSVインポート：UTF-8とShift-JISを自動判別して読み込む改良モード
         document.getElementById('csvUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // Shift-JISで強制読み込みして文字化けを回避
+            // まずはGoogleスプレッドシートの標準である UTF-8 で読み込みを試みる
             const reader = new FileReader();
             reader.onload = (event) => {
                 const content = event.target.result;
-                Papa.parse(content, {
+                
+                // UTF-8で読み込んだ結果、文字化け（置換文字 ）が含まれている場合は Shift-JIS と判断して読み直す
+                if (content.includes('')) {
+                    const sjisReader = new FileReader();
+                    sjisReader.onload = (sjisEvent) => {
+                        processCSV(sjisEvent.target.result);
+                    };
+                    sjisReader.readAsText(file, "Shift-JIS");
+                } else {
+                    processCSV(content);
+                }
+            };
+            reader.readAsText(file, "UTF-8");
+
+            // CSVのパースとデータ登録を行う共通関数
+            function processCSV(csvContent) {
+                Papa.parse(csvContent, {
                     header: false, // ヘッダーなし（配列の配列）として読み込む
                     skipEmptyLines: 'greedy',
                     complete: (results) => {
@@ -366,7 +382,6 @@
                         if (rows.length < 2) return showMessage("データが見つかりません");
 
                         // 1行目がヘッダー（項目名）であると仮定して、2行目から読み込む
-                        // もし1行目がデータっぽい（案件IDが含まれない）場合は1行目から読み込む
                         const startIdx = rows[0][0].includes("案件ID") ? 1 : 0;
 
                         fullData = rows.slice(startIdx)
@@ -408,8 +423,7 @@
                         saveToLocal(); applyFilters(); showMessage("インポート成功: " + fullData.length + "件");
                     }
                 });
-            };
-            reader.readAsText(file, "Shift-JIS");
+            }
         });
 
         window.exportAsHtmlViewer = () => {

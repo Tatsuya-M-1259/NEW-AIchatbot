@@ -349,27 +349,23 @@
             }
         }
 
-        // CSVインポート：UTF-8とShift-JISを自動判別して読み込む改良モード
+        // CSVインポート：Googleスプレッドシート（UTF-8）完全固定モード
         document.getElementById('csvUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // まずはGoogleスプレッドシートの標準である UTF-8 で読み込みを試みる
             const reader = new FileReader();
             reader.onload = (event) => {
-                const content = event.target.result;
+                let content = event.target.result;
                 
-                // 【修正箇所】UTF-8で読み込んだ結果、Shift-JISデータの混入による「置換文字(\uFFFD)」が含まれているかを厳密にチェック
-                if (content.includes('\uFFFD')) {
-                    const sjisReader = new FileReader();
-                    sjisReader.onload = (sjisEvent) => {
-                        processCSV(sjisEvent.target.result);
-                    };
-                    sjisReader.readAsText(file, "Shift-JIS");
-                } else {
-                    processCSV(content);
+                // GoogleスプレッドシートやExcelから出力されたUTF-8のBOM（隠しコード）を自動除去
+                if (content.startsWith('\uFEFF')) {
+                    content = content.slice(1);
                 }
+                
+                processCSV(content);
             };
+            // スプレッドシート出力に合わせ、文字コードを UTF-8 に完全固定
             reader.readAsText(file, "UTF-8");
 
             // CSVのパースとデータ登録を行う共通関数
@@ -387,8 +383,6 @@
                         fullData = rows.slice(startIdx)
                             .filter(row => row.length >= 5 && (row[4] || '').trim() !== '') // 5列目（問い合わせ内容）が空ならスキップ
                             .map(row => {
-                                // 列の順番（0から開始）に基づいてマッピング
-                                // 0:案件ID, 1:セッションID, 2:日時, 3:ユーザーID, 4:問い合わせ内容, 5:回答内容, 6:所管課, ...
                                 const rawDept = row[6] || '';
                                 const depts = rawDept.split(/[\n,、\/]/).map(s => s.trim()).filter(Boolean);
                                 
